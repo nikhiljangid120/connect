@@ -71,3 +71,21 @@ export const getRouteId = (pathname) => parsePath(pathname).routeId;
 export const getRouteZoom = (pathname) => parsePath(pathname).zoom;
 export const getPrimeNav = (pathname) => parsePath(pathname).kind === 'prime';
 export const getStreamNav = (pathname) => parsePath(pathname).kind === 'stream';
+
+// Shareable dialog state belongs to the URL; DOM anchors and form drafts do not.
+const driveDialogs = new Set(['files', 'info', 'clips', 'uploads']);
+export function dialogForLocation(location) {
+  const dialog = new URLSearchParams(location.search).get('dialog');
+  const page = parsePath(location.pathname).kind;
+  if (page === 'drive' && driveDialogs.has(dialog)) return dialog;
+  if (['dashboard', 'demo'].includes(page) && dialog === 'filter') return dialog;
+  return null;
+}
+
+export function dialogLocation(location, dialog) {
+  const query = new URLSearchParams(location.search);
+  if (dialog) query.set('dialog', dialog);
+  else query.delete('dialog');
+  const search = query.toString();
+  return { pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash || '' };
+}

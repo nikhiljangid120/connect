@@ -98,3 +98,27 @@ it.each(['0000010a--a51155e496', '00000000--0000000001'])('accepts modern and de
 it('uses the synthetic device consistently for demo startup and history', () => {
   expect(getDongleID('/demo')).toBe('deadbeefdeadbeef');
 });
+
+describe('shareable dialog grammar', () => {
+  it.each(['files', 'info', 'clips', 'uploads'])('accepts the %s dialog only on a drive', async (dialog) => {
+    const { dialogForLocation } = await import('./url');
+    expect(dialogForLocation({ pathname: `/${DONGLE}/${LOG}`, search: `?dialog=${dialog}` })).toBe(dialog);
+    expect(dialogForLocation({ pathname: `/${DONGLE}`, search: `?dialog=${dialog}` })).toBeNull();
+  });
+  it.each([`/${DONGLE}`, '/demo'])('accepts the date filter on %s', async (pathname) => {
+    const { dialogForLocation } = await import('./url');
+    expect(dialogForLocation({ pathname, search: '?dialog=filter' })).toBe('filter');
+  });
+  it.each(['unknown', 'pair', 'unpair', 'filter'])('ignores invalid drive dialog %s', async (dialog) => {
+    const { dialogForLocation } = await import('./url');
+    expect(dialogForLocation({ pathname: `/${DONGLE}/${LOG}`, search: `?dialog=${dialog}` })).toBeNull();
+  });
+  it('preserves the underlying route range, share query and hash', async () => {
+    const { dialogLocation, dialogForLocation } = await import('./url');
+    const initial = { pathname: `/${DONGLE}/${LOG}/0/20`, search: '?share_sig=test&share_exp=10', hash: '#video' };
+    const opened = dialogLocation(initial, 'files');
+    expect(dialogForLocation(opened)).toBe('files');
+    expect(dialogLocation(opened, null)).toEqual(initial);
+    expect(dialogForLocation(dialogLocation(opened, 'uploads'))).toBe('uploads');
+  });
+});

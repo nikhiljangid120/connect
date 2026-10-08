@@ -108,13 +108,22 @@ export function fetchFiles(routeName, nocache = false) {
     }
 
     const dongleId = routeName.split('|')[0];
-    const urlName = routeName.replace('|', '/');
     const urls = Object
       .keys(FILE_NAMES)
-      .filter((type) => files[type])
+      .filter((type) => Array.isArray(files?.[type]))
       .flatMap((type) => files[type].map((file) => ([type, file])))
       .reduce((state, [type, file]) => {
-        const segmentNum = parseInt(file.split(urlName)[1].split('/')[1], 10);
+        // Demo file URLs belong to the underlying public route, not its synthetic ID.
+        // Segment directories are part of the asset URL grammar for both routes.
+        let segment;
+        try {
+          segment = new URL(file).pathname.split('/').at(-2);
+        } catch {
+          return state;
+        }
+        if (!/^\d+$/.test(segment)) return state;
+        const segmentNum = Number(segment);
+        if (!Number.isSafeInteger(segmentNum)) return state;
         const fileName = `${routeName}--${segmentNum}/${type}`;
         state[fileName] = {
           url: file,

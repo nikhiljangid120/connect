@@ -9,22 +9,28 @@ Base: 109edb39ffa7a4ad3c38788ca2f39a286538ff07 (master).
 - Validate finite, increasing ranges; preserve zero-start URLs.
 - Apply PUSH/POP/REPLACE through the same history middleware without writing another URL from Prime navigation.
 - Replace legacy URLs after asynchronous lookup and ignore stale results after navigation.
+- Deep-link Files, More info, Clips, the drive upload queue, and dashboard date-filter dialogs with validated context. Visibility comes from URL query state; DOM menu anchors remain local.
+- Guard dialog close callbacks against navigation to another page/dialog, while preserving unrelated query arguments and fragments.
+- Parse asset segment directories defensively so public demo file URLs work without matching the synthetic route ID.
 - Deep-link device settings using ?settings=<deviceId>, preserving the underlying drive, other queries and hash.
 - Settings render outside the drawer and stream view; owner/superuser visibility is retained.
 - Preserve loaded route data/playback on modal-only URL changes, and avoid restoring stale pages when settings navigate elsewhere.
 
 ## Validation
 - Original baseline: 96 tests passed.
-- This branch: 131 tests passed; lint passed; production build passed; git diff --check passed.
+- This branch: 163 tests passed; lint passed; production build passed; git diff --check passed.
 - Real Chromium /demo and a modern drive URL rendered without uncaught page errors.
 - Mounted-app Chromium check passed: opening settings preserved currentRoute/routes/loop references, paused state and offset; Back closed settings and Forward reopened it. Settings visibility used a demo-owner fixture in local Redux, not a real authenticated account.
 - Image inspection was unavailable; screenshots were captured but visual QA was not completed.
 
 ## Scope and remaining work
-This is a routing foundation, not completion of every major dialog requirement. Clip/upload/pairing dialogs are not all deep-linked. Existing action-driven state updates and compatibility URL helpers remain. Review all transitions and authenticated settings behavior on real accounts, plus Back/Forward, reload, auth redirects and unknown paths, before an upstream proposal.
+This is a routing foundation, not completion of every major dialog requirement. Top-level drive Clips and upload queue dialogs are now deep-linked. Pairing, settings-nested upload/unpair confirmation, and individual clip viewer/delete confirmations remain local. Existing action-driven state updates and compatibility URL helpers remain. Review all transitions and authenticated settings behavior on real accounts, plus Back/Forward, reload, auth redirects and unknown paths, before an upstream proposal.
 
 ## Your review
 The AI agent wrote this implementation and tests. Read the diff, run the tests, explain each changed line and only then decide whether to submit. Do not claim independently written work or bounty completion.
 
 ## Built-in browser follow-up
 Compiled draft tested using isolated local-asset request interception, not a live deployment. Settings-only navigation preserved route/cache/loop identity, paused state and offset. Back closed settings; Forward reopened them. No page errors in this test. Owner visibility used a demo-only Redux fixture; real authenticated owner flows remain untested.
+
+## Final dialog browser regression
+Files/Clips/upload queue opened from cold drive URLs. Files-to-info navigation retained route/cache/loop identity, paused state and offset. Back/Forward restored the prior dialog; info reload and Escape close worked. Date-filter click, Back/Forward and reload worked. A 390px viewport had no horizontal overflow after layout settled. After fixing demo asset segment parsing, these checks and the settings check emitted no page errors.
