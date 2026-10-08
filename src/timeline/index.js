@@ -1,4 +1,5 @@
 import store from '../store';
+import { readMediaClock } from './mediaClock';
 
 /**
  * Get current playback offset
@@ -9,7 +10,10 @@ import store from '../store';
 export function currentOffset(state = null) {
   if (!state) {
     state = store.getState();
+    const mediaOffset = readMediaClock(state.currentRoute?.fullname);
+    if (mediaOffset !== null) return mediaOffset;
   }
+  if (state.mediaDriven) return state.offset ?? 0;
 
   /** @type {number} */
   let offset;

@@ -14,6 +14,7 @@ export function reducer(_state, action) {
       state = {
         ...state,
         offset: action.offset,
+        seekRevision: (state.seekRevision || 0) + 1,
         startTime: Date.now(),
       };
 
@@ -61,9 +62,22 @@ export function reducer(_state, action) {
         startTime: Date.now(),
       };
       break;
+    case Types.ACTION_MEDIA_TIME:
+      if (action.route === state.currentRoute?.fullname && Number.isFinite(action.offset)) {
+        state = { ...state, mediaDriven: true, offset: action.offset,
+          isBufferingVideo: action.buffering, startTime: Date.now() };
+      }
+      break;
+    case Types.ACTION_MEDIA_DETACH:
+      if (action.route === state.currentRoute?.fullname) {
+        state = { ...state, mediaDriven: false, isBufferingVideo: false, startTime: Date.now() };
+      }
+      break;
     case Types.ACTION_RESET:
       state = {
         ...state,
+        mediaDriven: false,
+        seekRevision: (state.seekRevision || 0) + 1,
         desiredPlaySpeed: 1,
         isBufferingVideo: true,
         offset: 0,
@@ -86,7 +100,7 @@ export function reducer(_state, action) {
   }
 
   // normalize over loop
-  if (state.offset !== null && state.loop?.startTime) {
+  if (!state.mediaDriven && state.offset !== null && state.loop?.startTime != null) {
     const playSpeed = state.isBufferingVideo ? 0 : state.desiredPlaySpeed;
     const offset = state.offset + (Date.now() - state.startTime) * playSpeed;
     loopOffset = state.loop.startTime;
