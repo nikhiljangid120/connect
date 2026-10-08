@@ -25,3 +25,6 @@ This is a routing foundation, not completion of every major dialog requirement. 
 
 ## Your review
 The AI agent wrote this implementation and tests. Read the diff, run the tests, explain each changed line and only then decide whether to submit. Do not claim independently written work or bounty completion.
+
+## Built-in browser follow-up
+Compiled draft tested using isolated local-asset request interception, not a live deployment. Settings-only navigation preserved route/cache/loop identity, paused state and offset. Back closed settings; Forward reopened them. No page errors in this test. Owner visibility used a demo-only Redux fixture; real authenticated owner flows remain untested.
