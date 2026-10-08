@@ -61,6 +61,7 @@ export class DriveVideo extends Component {
     if (this.boundRoute) this.props.dispatch({ type: ACTION_MEDIA_DETACH, route: this.boundRoute });
     this.boundRoute = null;
     this.video = null;
+    this.props.onAudioStatusChange?.(false);
   };
 
   videoOffset = () => (this.video?.currentTime ?? 0) * 1000 + (this.props.currentRoute?.videoStartOffset || 0);
@@ -104,9 +105,12 @@ export class DriveVideo extends Component {
     });
     this.applySeek(this.props.offset ?? this.props.loop?.startTime ?? 0);
     this.observe();
-    const tracks = video.audioTracks;
-    if (tracks?.length) this.props.onAudioStatusChange?.(true);
     const hls = this.videoPlayer.current.getInternalPlayer('hls');
+    // Codec discovery can precede canplay/onReady. Read the already-loaded track
+    // metadata as well as subscribing to later changes; Chromium has no audioTracks.
+    const hasAudio = Boolean(video.audioTracks?.length || hls?.audioTracks?.length
+      || hls?.levels?.some((level) => Boolean(level.audioCodec)));
+    this.props.onAudioStatusChange?.(hasAudio);
     if (hls) {
       const codecs = (_event, data) => this.props.onAudioStatusChange?.(Boolean(data.audio));
       hls.on('hlsBufferCodecs', codecs);

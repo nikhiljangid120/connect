@@ -7,13 +7,13 @@ import { DriveVideo } from './index';
 
 vi.mock('../../store', () => ({ default: { getState: vi.fn() } }));
 
-const fake = vi.hoisted(() => ({ props: null, video: null, seek: vi.fn() }));
+const fake = vi.hoisted(() => ({ props: null, video: null, hls: null, seek: vi.fn() }));
 vi.mock('react-player/file', async () => {
   const ReactModule = await import('react');
   return { default: ReactModule.forwardRef((props, ref) => {
     fake.props = props;
     ReactModule.useImperativeHandle(ref, () => ({
-      getInternalPlayer: (name) => name === 'hls' ? null : fake.video,
+      getInternalPlayer: (name) => name === 'hls' ? fake.hls : fake.video,
       seekTo: fake.seek,
     }));
     return <div data-testid="player" />;
@@ -25,6 +25,7 @@ const defaults = { currentRoute: route, desiredPlaySpeed: 1, offset: 1000, seekR
   isBufferingVideo: false, dispatch: vi.fn(), isMuted: true };
 beforeEach(() => {
   vi.clearAllMocks();
+  fake.hls = null;
   fake.video = document.createElement('video');
   Object.defineProperties(fake.video, {
     readyState: { configurable: true, value: 4 }, paused: { configurable: true, value: false },
@@ -127,4 +128,21 @@ it('clears blocked-autoplay recovery state when changing routes', () => {
   view.rerender(<DriveVideo {...defaults} ref={ref} currentRoute={{ ...route, fullname: 'another|route' }} />);
   expect(ref.current.state.autoplayBlocked).toBe(false);
   expect(ref.current.state.videoError).toBeNull();
+});
+
+it('detects HLS audio metadata discovered before onReady and releases its listener', () => {
+  fake.hls = { audioTracks: [], levels: [{ audioCodec: 'mp4a.40.2' }], on: vi.fn(), off: vi.fn() };
+  const onAudioStatusChange = vi.fn();
+  const view = render(<DriveVideo {...defaults} onAudioStatusChange={onAudioStatusChange} />); ready();
+  expect(onAudioStatusChange).toHaveBeenLastCalledWith(true);
+  const [event, listener] = fake.hls.on.mock.calls[0];
+  view.unmount();
+  expect(fake.hls.off).toHaveBeenCalledWith(event, listener);
+  expect(onAudioStatusChange).toHaveBeenLastCalledWith(false);
+});
+it('does not report audio for a video-only HLS stream', () => {
+  fake.hls = { audioTracks: [], levels: [{ videoCodec: 'avc1.42e01e' }], on: vi.fn(), off: vi.fn() };
+  const onAudioStatusChange = vi.fn();
+  render(<DriveVideo {...defaults} onAudioStatusChange={onAudioStatusChange} />); ready();
+  expect(onAudioStatusChange).toHaveBeenLastCalledWith(false);
 });

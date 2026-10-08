@@ -10,12 +10,13 @@ Base: 109edb39ffa7a4ad3c38788ca2f39a286538ff07 (master).
 - Remove the 500ms synchronization loop, debounce, repeated corrective seeks and playback-rate nudges.
 - Keep video mounted when switching to Map, clean up media listeners/frame callbacks and clock ownership on detach.
 - Add delayed loading feedback, fatal-error Retry, recoverable HLS handling and a direct user-gesture play retry for blocked autoplay.
+- Read previously discovered HLS audio tracks/codecs at readiness, and clear audio availability when detaching.
 - Loop against observed media time; pass the initial requested offset to HLS loading.
 - Freeze the fallback clock after fatal errors while preserving playback intent for Retry. Detach stale media listeners/clock on credential changes and clear blocked-autoplay state on route changes.
 
 ## Validation
 - Original baseline: 96 tests passed.
-- This branch: 116 tests passed; lint passed; production build passed; git diff --check passed.
+- This branch: 118 tests passed; lint passed; production build passed; git diff --check passed.
 - Real public demo playback in desktop Chromium: video loaded and played, media/timeline offsets differed only by the expected route video-start offset, pause stayed paused, seek reached the requested 15s route time, Map kept the same DOM video, and a 390px viewport had no horizontal overflow.
 - Unit regressions cover clock ownership, cleanup, explicit/repeated seeks, stale route events, nonfatal/fatal errors, autoplay, repeated readiness, zero-start loops and buffering intent.
 - Built-in browser (isolated compiled-draft preview): pause/jump controls worked; simulated 404 playlist failure displayed Retry and recovered after removing the fault. A deliberately invoked fatal callback after attached playback exposed fallback timeline drift; the fix reduced measured drift from 1,569ms to zero over about 1.5s. This is fault injection, not a real network-outage test.
@@ -26,3 +27,6 @@ Real iOS Safari, iOS installed PWA, Android Chrome, Android installed PWA, deskt
 
 ## Your review
 The AI agent wrote this implementation and tests. Read every line, run tests and manually exercise the controls before submission. Understand event ownership, offsets, retry behavior and remaining limitations. Do not claim independently written work or bounty completion.
+
+## Audio browser follow-up
+A local synthetic H.264/AAC HLS stream played in the built-in desktop Chromium browser. The Unmute control was enabled, unmuting changed the native media muted flag, playback progressed, Pause paused the native video, and no page errors occurred. Volume was held at zero for the test; this verifies media/control behavior, not audible sound quality or iOS behavior.
