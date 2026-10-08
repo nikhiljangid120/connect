@@ -5,7 +5,7 @@ import ReactPlayer from 'react-player/file';
 import { api } from '../../api/backend';
 import Colors from '../../colors';
 import { ErrorOutline } from '../../icons';
-import { pause, play } from '../../timeline/playback';
+import { pause, play, bufferVideo } from '../../timeline/playback';
 import { ACTION_MEDIA_TIME, ACTION_MEDIA_DETACH } from '../../actions/types';
 import { attachMediaClock } from '../../timeline/mediaClock';
 
@@ -26,9 +26,12 @@ export class DriveVideo extends Component {
   componentDidMount() { this.updateLoading(); }
 
   componentDidUpdate(previous) {
-    if (previous.currentRoute?.fullname !== this.props.currentRoute?.fullname) {
+    if (previous.currentRoute?.fullname !== this.props.currentRoute?.fullname
+      || previous.currentRoute?.share_exp !== this.props.currentRoute?.share_exp
+      || previous.currentRoute?.share_sig !== this.props.currentRoute?.share_sig) {
       this.detach();
-      this.setState({ videoError: null });
+      this.props.dispatch(bufferVideo(true));
+      this.setState({ videoError: null, autoplayBlocked: false, showLoading: false });
     } else if (previous.seekRevision !== this.props.seekRevision) {
       if (this.state.videoError) this.retry();
       else this.applySeek(this.props.offset);
@@ -149,6 +152,9 @@ export class DriveVideo extends Component {
       return;
     }
     this.detach();
+    // Detaching releases the media clock. Keep the fallback clock frozen until Retry
+    // attaches a ready video, without losing the user's requested playback speed.
+    this.props.dispatch(bufferVideo(true));
     this.setState({ videoError: message, showLoading: false });
   };
 

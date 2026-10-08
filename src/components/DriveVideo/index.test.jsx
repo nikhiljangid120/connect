@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
-import { ACTION_MEDIA_TIME, ACTION_MEDIA_DETACH, ACTION_PAUSE } from '../../actions/types';
+import { ACTION_MEDIA_TIME, ACTION_MEDIA_DETACH, ACTION_PAUSE, ACTION_BUFFER_VIDEO } from '../../actions/types';
 import { readMediaClock } from '../../timeline/mediaClock';
 import { DriveVideo } from './index';
 
@@ -95,4 +95,36 @@ it('observes seeking without changing the desired playback speed', () => {
   act(() => fake.video.dispatchEvent(new Event('seeking')));
   expect(defaults.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: ACTION_MEDIA_TIME, buffering: true }));
   expect(fake.props.playbackRate).toBe(2);
+});
+
+it('freezes the fallback clock after an attached video fails without losing play intent', () => {
+  render(<DriveVideo {...defaults} desiredPlaySpeed={2} />); ready();
+  defaults.dispatch.mockClear();
+  act(() => fake.props.onError('hlsError', { fatal: true, type: 'networkError' }));
+  const actions = defaults.dispatch.mock.calls.map(([action]) => action);
+  expect(actions.findIndex(action => action.type === ACTION_BUFFER_VIDEO && action.buffering))
+    .toBeGreaterThan(actions.findIndex(action => action.type === ACTION_MEDIA_DETACH));
+  expect(actions.some(action => action.type === ACTION_PAUSE)).toBe(false);
+  fireEvent.click(screen.getByText('Retry'));
+  expect(fake.props.playbackRate).toBe(2);
+});
+
+it('releases the old media clock when credentials change for the same route', () => {
+  const view = render(<DriveVideo {...defaults} />); ready();
+  view.rerender(<DriveVideo {...defaults} currentRoute={{ ...route, share_sig: 'replacement' }} />);
+  expect(readMediaClock(route.fullname)).toBeNull();
+  expect(defaults.dispatch).toHaveBeenCalledWith({ type: ACTION_BUFFER_VIDEO, buffering: true });
+  defaults.dispatch.mockClear();
+  fake.video.dispatchEvent(new Event('timeupdate'));
+  expect(defaults.dispatch).not.toHaveBeenCalled();
+});
+
+it('clears blocked-autoplay recovery state when changing routes', () => {
+  const ref = React.createRef();
+  const view = render(<DriveVideo {...defaults} ref={ref} />); ready();
+  act(() => fake.props.onError({ name: 'NotAllowedError' }));
+  expect(ref.current.state.autoplayBlocked).toBe(true);
+  view.rerender(<DriveVideo {...defaults} ref={ref} currentRoute={{ ...route, fullname: 'another|route' }} />);
+  expect(ref.current.state.autoplayBlocked).toBe(false);
+  expect(ref.current.state.videoError).toBeNull();
 });
